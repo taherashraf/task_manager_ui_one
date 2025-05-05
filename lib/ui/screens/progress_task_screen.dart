@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:task_manager_ui_one/data/models/task_list_model.dart';
-import 'package:task_manager_ui_one/data/service/network_client.dart';
-import 'package:task_manager_ui_one/data/utils/urls.dart';
+import 'package:get/get.dart';
+import 'package:task_manager_ui_one/ui/controllers/progress_task_controller.dart';
 import 'package:task_manager_ui_one/ui/widgets/centered_circular_progress_indicator.dart';
 import 'package:task_manager_ui_one/ui/widgets/snack_bar_message.dart';
-import '../../data/models/task_model.dart';
 import '../widgets/task_card.dart';
 
 class ProgressTaskScreen extends StatefulWidget {
@@ -15,8 +13,8 @@ class ProgressTaskScreen extends StatefulWidget {
 }
 
 class _ProgressTaskScreenState extends State<ProgressTaskScreen> {
-  bool _getProgressTaskStatusInProgress = false;
-  List<TaskModel> _progressTaskStatusList = [];
+
+  ProgressTaskController progressTaskController = Get.find<ProgressTaskController>();
 
   @override
   void initState() {
@@ -29,30 +27,34 @@ class _ProgressTaskScreenState extends State<ProgressTaskScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Visibility(
-            visible: _getProgressTaskStatusInProgress == false,
-            replacement: SizedBox(
-              height: 300,
-              child: CenteredCircularProgressIndicator(),
-            ),
-            child: Expanded(
-              child: ListView.separated(
-                itemCount: _progressTaskStatusList.length,
-                itemBuilder: (context, index) {
-                  final progressList = _progressTaskStatusList[index];
-                  return TaskCard(
-                    title: progressList.title,
-                    description: progressList.description,
-                    date: progressList.createdDate,
-                    chipText: progressList.status,
-                    taskStatus: TaskStatus.progress,
-                    taskModel: progressList,
-                    refreshList: _getAllProgressTaskStatusList,
-                  );
-                },
-                separatorBuilder: (context, index) => const SizedBox(height: 8),
-              ),
-            ),
+          GetBuilder<ProgressTaskController>(
+            builder: (controller) {
+              return Visibility(
+                visible: controller.getProgressTaskStatusInProgress == false,
+                replacement: SizedBox(
+                  height: 300,
+                  child: CenteredCircularProgressIndicator(),
+                ),
+                child: Expanded(
+                  child: ListView.separated(
+                    itemCount: controller.progressTaskStatusList.length,
+                    itemBuilder: (context, index) {
+                      final progressList = controller.progressTaskStatusList[index];
+                      return TaskCard(
+                        title: progressList.title,
+                        description: progressList.description,
+                        date: progressList.createdDate,
+                        chipText: progressList.status,
+                        taskStatus: TaskStatus.progress,
+                        taskModel: progressList,
+                        refreshList: _getAllProgressTaskStatusList,
+                      );
+                    },
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  ),
+                ),
+              );
+            }
           ),
         ],
       ),
@@ -60,20 +62,11 @@ class _ProgressTaskScreenState extends State<ProgressTaskScreen> {
   }
 
   Future<void> _getAllProgressTaskStatusList() async {
-    _getProgressTaskStatusInProgress = true;
-    setState(() {});
 
-    NetworkResponse response = await NetworkClient.getRequest(
-      url: Urls.progressTaskListStatusUrl,
-    );
-    if (response.isSuccess) {
-      TaskListModel taskListModel = TaskListModel.fromJson(response.data!);
-      _progressTaskStatusList = taskListModel.taskModelList;
-    } else {
-      showSnackBarMessage(context, response.errorMessage);
+    final bool isSuccess =  await progressTaskController.getAllProgressTaskStatusList();
+
+    if (!isSuccess) {
+      showSnackBarMessage(context, progressTaskController.errorMessage!, true);
     }
-
-    _getProgressTaskStatusInProgress = false;
-    setState(() {});
   }
 }

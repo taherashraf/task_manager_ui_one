@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:task_manager_ui_one/ui/controllers/completed_task_controller.dart';
 import 'package:task_manager_ui_one/ui/widgets/centered_circular_progress_indicator.dart';
-import '../../data/models/task_list_model.dart';
-import '../../data/models/task_model.dart';
-import '../../data/service/network_client.dart';
-import '../../data/utils/urls.dart';
 import '../widgets/snack_bar_message.dart';
 import '../widgets/task_card.dart';
 
@@ -15,8 +13,7 @@ class CompletedTaskScreen extends StatefulWidget {
 }
 
 class _CompletedTaskScreenState extends State<CompletedTaskScreen> {
-  bool _getCompletedTaskStatusInProgress = false;
-  List<TaskModel> _completedTaskStatusList = [];
+  CompletedTaskController completedTaskController = Get.find<CompletedTaskController>();
 
   @override
   void initState() {
@@ -29,30 +26,34 @@ class _CompletedTaskScreenState extends State<CompletedTaskScreen> {
     return Scaffold(
       body: Column(
         children: [
-          Visibility(
-            visible: _getCompletedTaskStatusInProgress == false,
-            replacement: SizedBox(
-              height: 300,
-              child: CenteredCircularProgressIndicator(),
-            ),
-            child: Expanded(
-              child: ListView.separated(
-                itemCount: _completedTaskStatusList.length,
-                itemBuilder: (context, index) {
-                  final completedList = _completedTaskStatusList[index];
-                  return TaskCard(
-                    title: completedList.title,
-                    description: completedList.description,
-                    date: completedList.createdDate,
-                    chipText: completedList.status,
-                    taskStatus: TaskStatus.completed,
-                    taskModel: completedList,
-                    refreshList: _getAllCompletedTaskStatusList,
-                  );
-                },
-                separatorBuilder: (context, index) => const SizedBox(height: 8),
-              ),
-            ),
+          GetBuilder<CompletedTaskController>(
+            builder: (controller) {
+              return Visibility(
+                visible: controller.getCompletedTaskStatusInProgress == false,
+                replacement: SizedBox(
+                  height: 300,
+                  child: CenteredCircularProgressIndicator(),
+                ),
+                child: Expanded(
+                  child: ListView.separated(
+                    itemCount: controller.completedTaskStatusList.length,
+                    itemBuilder: (context, index) {
+                      final completedList = controller.completedTaskStatusList[index];
+                      return TaskCard(
+                        title: completedList.title,
+                        description: completedList.description,
+                        date: completedList.createdDate,
+                        chipText: completedList.status,
+                        taskStatus: TaskStatus.completed,
+                        taskModel: completedList,
+                        refreshList: _getAllCompletedTaskStatusList,
+                      );
+                    },
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                  ),
+                ),
+              );
+            }
           ),
         ],
       ),
@@ -60,20 +61,9 @@ class _CompletedTaskScreenState extends State<CompletedTaskScreen> {
   }
 
   Future<void> _getAllCompletedTaskStatusList() async {
-    _getCompletedTaskStatusInProgress = true;
-    setState(() {});
-
-    NetworkResponse response = await NetworkClient.getRequest(
-      url: Urls.completedTaskListStatusUrl,
-    );
-    if (response.isSuccess) {
-      TaskListModel taskListModel = TaskListModel.fromJson(response.data!);
-      _completedTaskStatusList = taskListModel.taskModelList;
-    } else {
-      showSnackBarMessage(context, response.errorMessage);
+    final bool isSuccess = await completedTaskController.getAllCompletedTaskStatusList();
+    if (!isSuccess) {
+      showSnackBarMessage(context, completedTaskController.errorMessage!, true);
     }
-
-    _getCompletedTaskStatusInProgress = false;
-    setState(() {});
   }
 }

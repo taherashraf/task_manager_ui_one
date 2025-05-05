@@ -1,15 +1,12 @@
-import 'dart:convert';
 
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:get/get.dart';
 import 'package:task_manager_ui_one/data/models/user_model.dart';
 import 'package:task_manager_ui_one/ui/controllers/auth_controller.dart';
+import 'package:task_manager_ui_one/ui/controllers/update_profile_controller.dart';
 import 'package:task_manager_ui_one/ui/widgets/centered_circular_progress_indicator.dart';
 
-import '../../data/models/login_model.dart';
-import '../../data/service/network_client.dart';
-import '../../data/utils/urls.dart';
 import '../widgets/screen_background.dart';
 import '../widgets/snack_bar_message.dart';
 import '../widgets/tm_app_bar.dart';
@@ -23,20 +20,17 @@ class UpdateProfileScreen extends StatefulWidget {
 
 class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   final TextEditingController _emailTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _firstNameTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _lastNameTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _mobileTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _passwordTEditingController =
-      TextEditingController();
+  TextEditingController();
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-
-  final ImagePicker _imagePicker = ImagePicker();
-  XFile? _pickedImage;
 
   @override
   void initState() {
@@ -47,7 +41,10 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
     _lastNameTEditingController.text = userModel.lastName;
     _mobileTEditingController.text = userModel.mobile;
   }
-  bool _updateInProgress = false;
+
+  UpdateProfileController updateProfileController = Get.find<
+      UpdateProfileController>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,7 +61,10 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                   const SizedBox(height: 32),
                   Text(
                     'Update Profile',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .titleMedium,
                   ),
                   const SizedBox(height: 24),
                   _buildPhotoPickerWidget(),
@@ -89,7 +89,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(hintText: 'First Name'),
                     validator: (String? value) {
-                      if (value?.trim().isEmpty ?? true) {
+                      if (value
+                          ?.trim()
+                          .isEmpty ?? true) {
                         return 'Enter your first name';
                       }
                       return null;
@@ -101,7 +103,9 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                     textInputAction: TextInputAction.next,
                     decoration: InputDecoration(hintText: 'Last Name'),
                     validator: (String? value) {
-                      if (value?.trim().isEmpty ?? true) {
+                      if (value
+                          ?.trim()
+                          .isEmpty ?? true) {
                         return 'Enter your last name';
                       }
                       return null;
@@ -129,13 +133,17 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
                     decoration: InputDecoration(hintText: 'Password'),
                   ),
                   const SizedBox(height: 16),
-                  Visibility(
-                    visible: _updateInProgress == false,
-                    replacement: CenteredCircularProgressIndicator(),
-                    child: ElevatedButton(
-                      onPressed: _onTapSubmitButton,
-                      child: Icon(Icons.arrow_circle_right_outlined),
-                    ),
+                  GetBuilder<UpdateProfileController>(
+                    builder: (controller) {
+                      return Visibility(
+                        visible: controller.updateInProgress == false,
+                        replacement: CenteredCircularProgressIndicator(),
+                        child: ElevatedButton(
+                          onPressed: _onTapSubmitButton,
+                          child: Icon(Icons.arrow_circle_right_outlined),
+                        ),
+                      );
+                    }
                   ),
                 ],
               ),
@@ -171,12 +179,16 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
               child: Text('Photo', style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(width: 8),
-            Text(
-              _pickedImage?.name ?? 'Select your Photo',
-              style: TextStyle(
-                color: Colors.black54,
-                fontWeight: FontWeight.w400,
-              ),
+            GetBuilder<UpdateProfileController>(
+              builder: (controller) {
+                return Text(
+                  controller.pickedImage?.name ?? 'Select your Photo',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontWeight: FontWeight.w400,
+                  ),
+                );
+              }
             ),
           ],
         ),
@@ -185,54 +197,28 @@ class _UpdateProfileScreenState extends State<UpdateProfileScreen> {
   }
 
   void _onTapSubmitButton() {
-    if(_formKey.currentState!.validate()){
+    if (_formKey.currentState!.validate()) {
       _updateProfile();
     }
   }
 
   Future<void> _updateProfile() async {
-    _updateInProgress = true;
-    setState(() {});
-    Map<String, dynamic> requestBody = {
-      "email": _emailTEditingController.text.trim(),
-      "firstName": _firstNameTEditingController.text.trim(),
-      "lastName": _lastNameTEditingController.text.trim(),
-      "mobile": _mobileTEditingController.text.trim(),
-    };
-    if (_passwordTEditingController.text.isNotEmpty){
-      requestBody['password'] = _passwordTEditingController.text;
-    }
-    if(_pickedImage != null) {
-      List<int> imageBytes =  await _pickedImage!.readAsBytes();
-      String encodedImage = base64UrlEncode(imageBytes);
-      requestBody['photo'] = encodedImage;
-    }
-    NetworkResponse response = await NetworkClient.postRequest(
-      url: Urls.updateProfileUrl,
-      body: requestBody,
-    );
-    _updateInProgress = false;
-    setState(() {});
-    if (response.isSuccess) {
+    final isSuccess = await updateProfileController.updateProfile(
+        _emailTEditingController.text.trim(),
+        _firstNameTEditingController.text.trim(),
+        _lastNameTEditingController.text.trim(), _mobileTEditingController.text.trim(),
+        _passwordTEditingController.text);
+
+    if (isSuccess) {
       _passwordTEditingController.clear();
       showSnackBarMessage(context, 'Update Successfully Completed');
-
-      UserModel updatedUser = UserModel.fromJson(requestBody);
-      await AuthController.saveUserInformation(AuthController.token!, updatedUser);
-      await AuthController.getUserInformation();
-      setState(() {
-      });
     } else {
-      showSnackBarMessage(context, response.errorMessage, true);
+      showSnackBarMessage(context, updateProfileController.errorMessage!, true);
     }
   }
 
   Future<void> _onTapPhotoPicker() async {
-    XFile? image = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      _pickedImage = image;
-      setState(() {});
-    }
+    await updateProfileController.onTapPhotoPicker();
   }
 
   @override

@@ -1,11 +1,12 @@
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:task_manager_ui_one/ui/controllers/register_controller.dart';
 
-import '../../data/service/network_client.dart';
-import '../../data/utils/urls.dart';
 import '../widgets/screen_background.dart';
 import '../widgets/snack_bar_message.dart';
+
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -15,18 +16,20 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _firstNameTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _lastNameTEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _mobileEditingController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _passwordTEditingController =
-      TextEditingController();
+  TextEditingController();
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _registrationInProgress = false;
+
+  RegisterController registerController = Get.find<RegisterController>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +45,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   SizedBox(height: 80),
                   Text(
                     'Join With Us',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme
+                        .of(context)
+                        .textTheme
+                        .titleMedium,
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
@@ -65,7 +71,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _firstNameTEditingController,
                     decoration: InputDecoration(hintText: 'First Name'),
                     validator: (String? value) {
-                      if (value?.trim().isEmpty ?? true) {
+                      if (value
+                          ?.trim()
+                          .isEmpty ?? true) {
                         return 'Enter your first name';
                       }
                       return null;
@@ -77,7 +85,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _lastNameTEditingController,
                     decoration: InputDecoration(hintText: 'Last Name'),
                     validator: (String? value) {
-                      if (value?.trim().isEmpty ?? true) {
+                      if (value
+                          ?.trim()
+                          .isEmpty ?? true) {
                         return 'Enter your last name';
                       }
                       return null;
@@ -113,15 +123,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  Visibility(
-                    visible: _registrationInProgress == false,
-                    replacement: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: _onTapSubmitButton,
-                      child: Icon(Icons.arrow_circle_right_outlined),
-                    ),
+                  GetBuilder<RegisterController>(
+                    builder: (controller) {
+                      return Visibility(
+                        visible: controller.registrationInProgress == false,
+                        replacement: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _onTapSubmitButton,
+                          child: Icon(Icons.arrow_circle_right_outlined),
+                        ),
+                      );
+                    }
                   ),
                   const SizedBox(height: 32),
                   Center(
@@ -140,9 +154,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                             recognizer:
-                                TapGestureRecognizer()
-                                  ..onTap =
-                                      _onTapSignInButton, // cascade operation double
+                            TapGestureRecognizer()
+                              ..onTap =
+                                  _onTapSignInButton, // cascade operation double
                           ),
                         ],
                       ),
@@ -164,30 +178,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _registerUser() async {
-    _registrationInProgress = true;
-    setState(() {});
-    Map<String, dynamic> requestBody = {
-      "email": _emailTEditingController.text.trim(),
-      "firstName": _firstNameTEditingController.text.trim(),
-      "lastName": _lastNameTEditingController.text.trim(),
-      "mobile": _mobileEditingController.text.trim(),
-      "password": _passwordTEditingController.text,
-    };
-    NetworkResponse response = await NetworkClient.postRequest(
-      url: Urls.registerUrl,
-      body: requestBody,
-    );
-    _registrationInProgress = false;
-    setState(() {});
-    if (response.isSuccess) {
+    final bool isSuccess = await registerController.registerUser(
+        _emailTEditingController.text.trim(),
+        _firstNameTEditingController.text.trim(),
+        _lastNameTEditingController.text.trim(), _mobileEditingController.text.trim(),
+        _passwordTEditingController.text);
+
+    if (isSuccess) {
       _clearText();
       showSnackBarMessage(context, 'Registration Successfully Completed');
     } else {
-      showSnackBarMessage(context, response.errorMessage, true);
+      showSnackBarMessage(context, registerController.errorMessage!, true);
     }
+
   }
 
-  void _clearText(){
+  void _clearText() {
     _emailTEditingController.clear();
     _firstNameTEditingController.clear();
     _lastNameTEditingController.clear();
